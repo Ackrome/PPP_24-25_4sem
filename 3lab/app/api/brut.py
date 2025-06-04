@@ -44,3 +44,9 @@ async def brut_file(
     except Exception as e:
         print(f"Ошибка в эндпоинте brut_file: {e}")
         raise HTTPException(status_code=500, detail=f"Ошибка запуска задачи: {str(e)}")
+    
+# Тестим
+@router.post(FastApiServerInfo.LONG)
+async def run_parse():
+    task = long_running_parse.delay()
+    return {"task_id": task.id}

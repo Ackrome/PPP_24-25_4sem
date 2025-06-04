@@ -129,6 +129,17 @@ async def brute_force_rar_celery(task_id, archive_path, passwords_file, total_pa
     return None
 
 
+# В name явно объявляю путь и имя "тяжелого" процесса
+@celery_app.task(bind=True, name="app.celery.tasks.long_running_parse")
+def long_running_parse(self, url: str):
+    r = aioredis.Redis(host=FastApiServerInfo.REDIS_HOST, port=FastApiServerInfo.REDIS_PORT, db=0)
+    result = {"task_id": self.request.id, "status": "in progress"}
+    r.publish("notifications", json.dumps(result))
+    asyncio.sleep(5)
+    result = {"task_id": self.request.id, "status": "done"}
+    r.publish("notifications", json.dumps(result))
+    return result
+
 @celery_app.task(bind=True, name="app.celery.tasks.brute_force_rar_task")
 def brute_force_rar_task(self, file_content_b64: str, original_filename: str, charset: str, max_length: int):
     task_id = self.request.id

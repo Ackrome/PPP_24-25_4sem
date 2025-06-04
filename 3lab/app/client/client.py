@@ -20,7 +20,7 @@ class AsyncClient:
         
         self.commands: Dict[str, Callable] = {
             "login": self.login,
-            "registr": self.register,
+            "register": self.register,
             "task": self.create_task,
             "cls": self.clear_console,
             "brut": self.brut_rar_task, 
@@ -31,20 +31,20 @@ class AsyncClient:
         self.input_task: asyncio.Task = None
         self.active_tasks = list()
 
-    async def show_notification(self, message: str):
+    async def notification_func(self, message: str):
         with patch_stdout():
-            print(f"[УВЕДОМЛЕНИЕ]: {message}")
+            print(f"[Нотификация от сервера]: {message}")
             sys.stdout.flush()
     
 
-    async def safe_print(self, message: str):
+    async def async_print(self, message: str):
         with patch_stdout():
-            prefix = f"[{self.user_email.split('@')[0]}@{self.user_token}]" if self.user_token else "[guest@anon]"
+            prefix = f"[Пользователь: {self.user_email.split('@')[0]}. С токеном: {self.user_token}]" if self.user_token else "[Некто анонимный]"
             print(f"{prefix} --> {message}\n", end="")
             sys.stdout.flush()
 
 
-    async def websocket_listener(self):
+    async def listener(self):
         while self.running:
             try:
 
@@ -54,13 +54,12 @@ class AsyncClient:
 
                         task_id_from_notification = data.get('task_id')
                         if task_id_from_notification and task_id_from_notification in self.active_tasks:
-                            await self.show_notification(json.dumps(data, ensure_ascii=False, indent=4)) # ensure_ascii=False для корректного отображения кириллицы
-                            # Как только задача выоплнена - она удаляется из списка активных задач пользователя
+                            await self.notification_func(json.dumps(data, ensure_ascii=False, indent=4))
                             if data["status"] == "done":
                                 self.active_tasks.remove(data['task_id'])
 
             except Exception as e:
-                await self.safe_print(f"WebSocket error: {str(e)}")
+                await self.async_print(f"WebSocket error: {str(e)}")
                 await asyncio.sleep(5)
                 
     async def login(self):
@@ -77,12 +76,12 @@ class AsyncClient:
                     data = response.json()
                     self.user_token = data['token']
                     self.user_email = data['email']
-                    await self.safe_print("Успешная авторизация!")
+                    await self.async_print("Успешная авторизация!")
                 else:
-                    await self.safe_print(f"Ошибка: {response.text}")
+                    await self.async_print(f"Ошибка: {response.text}")
                     
             except Exception as e:
-                await self.safe_print(f"Ошибка соединения: {str(e)}")
+                await self.async_print(f"Ошибка соединения: {str(e)}")
 
     async def register(self):
         email = await self.session.prompt_async("Email: ")
@@ -98,12 +97,12 @@ class AsyncClient:
                     data = response.json()
                     self.user_token = data['token']
                     self.user_email = data['email']
-                    await self.safe_print("Регистрация успешна!")
+                    await self.async_print("Регистрация успешна!")
                 else:
-                    await self.safe_print(f"Ошибка: {response.text}")
+                    await self.async_print(f"Ошибка: {response.text}")
                     
             except Exception as e:
-                await self.safe_print(f"Ошибка соединения: {str(e)}")
+                await self.async_print(f"Ошибка соединения: {str(e)}")
 
     async def create_task(self):
         async with httpx.AsyncClient() as client:
@@ -121,12 +120,12 @@ class AsyncClient:
                 task_id = data.get('task_id')
                 if task_id:
                     self.active_tasks.append(task_id)
-                    await self.safe_print(f"Задача {task_id} запущена.")
+                    await self.async_print(f"Задача {task_id} запущена.")
                 else:
-                    await self.safe_print(f"Не удалось получить ID задачи: {data}")
+                    await self.async_print(f"Не удалось получить ID задачи: {data}")
                 
             except Exception as e:
-                await self.safe_print(f"Ошибка: {str(e)}")
+                await self.async_print(f"Ошибка: {str(e)}")
 
     async def brut_rar_task(self):
         file_path = await self.session.prompt_async("Путь к RAR файлу: ")
@@ -135,10 +134,10 @@ class AsyncClient:
             max_length_str = await self.session.prompt_async("Максимальная длина пароля (до 8): ")
             max_length = int(max_length_str)
             if not 1 <= max_length <= 8:
-                await self.safe_print("Максимальная длина должна быть от 1 до 8.")
+                await self.async_print("Максимальная длина должна быть от 1 до 8.")
                 return
         except ValueError:
-            await self.safe_print("Некорректная максимальная длина пароля.")
+            await self.async_print("Некорректная максимальная длина пароля.")
             return
 
         async with httpx.AsyncClient() as client:
@@ -151,7 +150,7 @@ class AsyncClient:
                 os.makedirs(CLIENT_TEMP_STORAGE_DIR, exist_ok=True)
 
                 if not os.path.exists(file_path):
-                    await self.safe_print(f"Файл не найден: {file_path}")
+                    await self.async_print(f"Файл не найден: {file_path}")
                     return
 
                 with open(file_path, "rb") as f:
@@ -173,19 +172,19 @@ class AsyncClient:
                 task_id = resp_data.get('task_id')
                 if task_id:
                     self.active_tasks.append(task_id)
-                    await self.safe_print(f"Задача брутфорса {task_id} запущена.")
+                    await self.async_print(f"Задача брутфорса {task_id} запущена.")
                 else:
-                    await self.safe_print(f"Не удалось получить ID задачи: {resp_data}")
+                    await self.async_print(f"Не удалось получить ID задачи: {resp_data}")
             except FileNotFoundError:
-                await self.safe_print(f"Файл не найден: {file_path}")
+                await self.async_print(f"Файл не найден: {file_path}")
             except httpx.HTTPStatusError as e:
-                await self.safe_print(f"Ошибка HTTP: {e.response.status_code} - {e.response.text}")
+                await self.async_print(f"Ошибка HTTP: {e.response.status_code} - {e.response.text}")
             except Exception as e:
-                await self.safe_print(f"Ошибка: {str(e)}")
+                await self.async_print(f"Ошибка: {str(e)}")
 
     async def clear_console(self):
         os.system("cls" if os.name == "nt" else "clear")
-        await self.safe_print("Консоль очищена")
+        await self.async_print("Консоль очищена")
 
     async def exit(self):
         self.running = False
@@ -193,7 +192,7 @@ class AsyncClient:
             self.ws_task.cancel()
         if self.input_task:
             self.input_task.cancel()
-        await self.safe_print("Завершение работы...")
+        await self.async_print("Завершение работы...")
         # Даем задачам время на завершение
         await asyncio.sleep(0.1)
 
@@ -211,19 +210,19 @@ class AsyncClient:
                 if command in self.commands:
                     await self.commands[command]()
                 elif command == "help":
-                    await self.safe_print("Доступные команды: " + ", ".join(list(self.commands.keys()) + ['help']))
+                    await self.async_print("Доступные команды: " + ", ".join(list(self.commands.keys()) + ['help']))
                 else:
-                    await self.safe_print("Неизвестная команда. Введите 'help' для списка команд.")
+                    await self.async_print("Неизвестная команда. Введите 'help' для списка команд.")
             except (KeyboardInterrupt, EOFError): 
                 await self.exit()
                 break 
             except asyncio.CancelledError:
                 break 
             except Exception as e:
-                await self.safe_print(f"Ошибка в обработчике команд: {str(e)}")
+                await self.async_print(f"Ошибка в обработчике команд: {str(e)}")
 
     async def run(self):
-        self.ws_task = asyncio.create_task(self.websocket_listener())
+        self.ws_task = asyncio.create_task(self.listener())
         self.input_task = asyncio.create_task(self.command_handler())
         
         try:
@@ -232,7 +231,7 @@ class AsyncClient:
                 self.input_task,
             )
         except asyncio.CancelledError:
-            await self.safe_print("Клиент завершает работу...")
+            await self.async_print("Клиент завершает работу...")
         finally:
             # Убедимся, что все задачи отменены при выходе
             if self.ws_task and not self.ws_task.done():
