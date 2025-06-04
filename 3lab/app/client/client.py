@@ -6,7 +6,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.patch_stdout import patch_stdout
 from app.core.endpoints import FastApiServerInfo
 import json, shutil
-import os, sys
+import  sys, os
 
 class AsyncClient:
     def __init__(self):
