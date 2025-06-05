@@ -22,7 +22,7 @@ class AsyncClient:
             "login": self.login,
             "register": self.register,
             "task": self.create_task,
-            "cls": self.clear_console,
+            "clear": self.clear_console,
             "brut": self.brut_rar_task, 
             "exit": self.exit
         }
